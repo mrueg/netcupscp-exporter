@@ -23,7 +23,7 @@ jobs:
   
   build-and-push-binaries:
     runs-on: ubuntu-latest
-     steps:
+    steps:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
