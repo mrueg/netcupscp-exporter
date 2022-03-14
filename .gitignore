@@ -17,3 +17,6 @@
 
 # Binary
 netcupscp-exporter
+
+# Goreleaser
+dist/
