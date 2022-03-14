@@ -24,7 +24,14 @@ jobs:
   build-and-push-binaries:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Set up Go
+        uses: actions/setup-go@v2
+      
       - name: Run GoReleaser
+        if: startsWith(github.ref, 'refs/tags/')
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
