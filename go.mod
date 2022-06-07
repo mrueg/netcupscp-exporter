@@ -3,10 +3,10 @@ module github.com/mrueg/netcupscp-exporter
 go 1.17
 
 require (
-	github.com/go-kit/log v0.2.0
+	github.com/go-kit/log v0.2.1
 	github.com/hooklift/gowsdl v0.5.1-0.20220315224344-952a82fdd2b3
-	github.com/prometheus/client_golang v1.12.1
-	github.com/prometheus/common v0.33.0
+	github.com/prometheus/client_golang v1.12.2
+	github.com/prometheus/common v0.34.0
 	github.com/spf13/pflag v1.0.5
 	github.com/xhit/go-str2duration/v2 v2.0.0
 )
