@@ -17,6 +17,10 @@ Therefore, treat any values you get with caution.
 
 Default port: 9757
 
+### Helm Chart
+
+A Helm Chart is available [here](https://github.com/christianknell/helm-charts/tree/main/charts/netcupscp-exporter).
+
 ## Metrics
 
 ```
