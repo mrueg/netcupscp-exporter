@@ -21,6 +21,12 @@ Default port: 9757
 
 A Helm Chart is available [here](https://github.com/christianknell/helm-charts/tree/main/charts/netcupscp-exporter).
 
+### Grafana
+
+A Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/16705).
+
+![A preview of the Grafana dashboard.](grafana/dashboard.jpg "A preview of the Grafana dashboard.")
+
 ## Metrics
 
 ```
