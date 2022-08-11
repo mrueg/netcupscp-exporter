@@ -1,8 +1,8 @@
 {
   "__inputs": [
     {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
+      "name": "DS_PROMETHEUS_INPUT",
+      "label": "prometheus",
       "description": "",
       "type": "datasource",
       "pluginId": "prometheus",
@@ -75,7 +75,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1660148422669,
+  "iteration": 1660212996361,
   "links": [
     {
       "asDropdown": false,
@@ -2281,14 +2281,17 @@
   "refresh": false,
   "schemaVersion": 36,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "Prometheus",
+    "Netcup"
+  ],
   "templating": {
     "list": [
       {
         "current": {
           "selected": true,
-          "text": "Prometheus",
-          "value": "Prometheus"
+          "text": "All",
+          "value": "$__all"
         },
         "hide": 0,
         "includeAll": true,
@@ -2375,13 +2378,13 @@
     ]
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-60m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Netcup SCP",
   "uid": "netcupscp",
-  "version": 91,
+  "version": 3,
   "weekStart": ""
 }
