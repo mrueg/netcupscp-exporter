@@ -76,7 +76,7 @@
   "gnetId": 16705,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1660597308108,
+  "iteration": 1660598517366,
   "links": [
     {
       "asDropdown": false,
@@ -232,7 +232,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "count(scp_server_status{job=~\"$job\",status=\"online\"}) - count(scp_server_status{job=~\"$job\",status=\"offline\"}) / count(scp_server_status{job=~\"$job\"})",
+          "expr": "sum(scp_server_status{job=~\"$job\"}) / count(scp_server_status{job=~\"$job\"})",
           "refId": "A"
         }
       ],
@@ -294,7 +294,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(scp_cpu_cores{job=~\"$job\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -542,7 +547,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
+          "exemplar": false,
           "expr": "count(scp_reboot_recommended{job=~\"$job\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -604,7 +614,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(scp_rescue_active{job=~\"$job\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -1633,7 +1648,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1717,7 +1733,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1903,7 +1920,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1966,7 +1984,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -2050,7 +2069,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -2146,7 +2166,8 @@
             "mode": "percentage",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "#EAB839",
@@ -2225,7 +2246,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -2288,7 +2310,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "#EAB839",
@@ -2445,13 +2468,13 @@
     ]
   },
   "time": {
-    "from": "now-60m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Netcup SCP",
   "uid": "netcupscp",
-  "version": 8,
+  "version": 15,
   "weekStart": ""
 }
