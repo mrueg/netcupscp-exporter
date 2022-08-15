@@ -42,6 +42,7 @@ func NewScpCollector(client scpclient.WSEndUser, logger log.Logger, loginName *s
 	var prefix = "scp_"
 	return &scpCollector{
 		client:    client,
+		logger:    logger,
 		loginName: loginName,
 		password:  password,
 		cpuCores: prometheus.NewDesc(prefix+"cpu_cores",
