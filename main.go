@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
+	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/spf13/pflag"
 )
 
@@ -22,6 +23,7 @@ var (
 	loginName = pflag.String("login-name", "", "User ID")
 	password  = pflag.String("password", "", "API Password")
 	addr      = pflag.String("listen-address", ":9757", "The address to listen on for HTTP requests.")
+	tlsConfig = pflag.String("tls-config", "", "Path to TLS config file.")
 )
 
 const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser"
@@ -37,15 +39,14 @@ func main() {
 	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
 	prometheus.DefaultRegisterer.MustRegister(scpCollector)
 	prometheus.DefaultRegisterer.MustRegister(version.NewCollector("scp"))
-	http.Handle("/metrics", promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{
-			// Opt into OpenMetrics to support exemplars.
-			EnableOpenMetrics: true,
-		}))
-
+        metricsServer := http.Server{Handler: promhttp.HandlerFor(
+                prometheus.DefaultGatherer,
+                promhttp.HandlerOpts{
+                        // Opt into OpenMetrics to support exemplars.
+                        EnableOpenMetrics: true,
+                }), Addr: *addr}
 	http.Handle("/", http.RedirectHandler("/metrics", http.StatusFound))
-	err := http.ListenAndServe(*addr, nil)
+	err := web.ListenAndServe(&metricsServer, *tlsConfig, logger)
 	if err != nil {
 		_ = logger.Log("msg", "Run into bad state", "error", err)
 		os.Exit(1)
