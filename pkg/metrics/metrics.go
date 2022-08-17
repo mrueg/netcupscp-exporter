@@ -5,11 +5,13 @@
 package metrics
 
 import (
+	"encoding/xml"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xhit/go-str2duration/v2"
@@ -120,9 +122,14 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	generic_response, err := collector.client.GetVServers(generic_request)
 	if err != nil {
-		_ = collector.logger.Log("msg", "Unable to get servers", "err", err)
+		_ = level.Error(collector.logger).Log("msg", "Unable to get servers", "err", err)
 	}
+
+	debug, _ := xml.Marshal(generic_response)
+	_ = level.Debug(collector.logger).Log("msg", string(debug))
+
 	vservers := generic_response.Return_
+
 	for _, vserver := range vservers {
 		info_request := &scpclient.GetVServerInformation{
 			Xmlns:       requestURL,
@@ -131,8 +138,10 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 			Vservername: *vserver,
 		}
 		info_response, err := collector.client.GetVServerInformation(info_request)
+		debug, _ := xml.Marshal(info_response)
+		_ = level.Debug(collector.logger).Log("msg", string(debug))
 		if err != nil {
-			_ = collector.logger.Log("msg", "Unable to get Server Information", "err", err)
+			_ = level.Error(collector.logger).Log("msg", "Unable to get Server Information", "err", err)
 		}
 		// Create CPU / Memory info metrics
 		ch <- prometheus.MustNewConstMetric(collector.cpuCores, prometheus.GaugeValue, float64(info_response.Return_.CpuCores), *vserver)
@@ -196,7 +205,7 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 		// Create start time metric
 		uptime, err := parseUptimeString(&info_response.Return_.Uptime)
 		if err != nil {
-			_ = collector.logger.Log("msg", "Unable to parse uptime", "err", err)
+			_ = level.Error(collector.logger).Log("msg", "Unable to parse uptime", "err", err)
 		}
 		ch <- prometheus.MustNewConstMetric(collector.server_start_time, prometheus.GaugeValue, float64(time.Now().Add(-uptime).Unix()), *vserver)
 	}

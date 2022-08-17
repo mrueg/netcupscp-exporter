@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/hooklift/gowsdl/soap"
 	"github.com/mrueg/netcupscp-exporter/pkg/metrics"
 	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
@@ -24,17 +25,21 @@ var (
 	password  = kingpin.Flag("password", "API Password").Envar("SCP_PASSWORD").Default("").String()
 	addr      = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Envar("SCP_LISTENADDRESS").Default(":9757").String()
 	tlsConfig = kingpin.Flag("tls-config", "Path to TLS config file.").Envar("SCP_TLSCONFIG").Default("").String()
+	logLevel  = kingpin.Flag("log-level", "Log level (debug, info, warn, error)").Envar("SCP_LOGLEVEL").Default("info").String()
 )
 
 const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser"
 
 func main() {
-	var logger log.Logger
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+
 	kingpin.Version(version.Version + " git " + version.Revision)
 	kingpin.Parse()
-	_ = logger.Log("msg", "Starting SCP Exporter version "+version.Version+" git "+version.Revision)
+
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	logger = level.NewFilter(logger, level.Allow(level.ParseDefault(*logLevel, level.InfoValue())))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+	_ = level.Info(logger).Log("msg", "Starting SCP Exporter version "+version.Version+" git "+version.Revision)
 	client := soap.NewClient(netcupWSUrl)
 	wsclient := scpclient.NewWSEndUser(client)
 	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
@@ -49,7 +54,7 @@ func main() {
 	http.Handle("/", http.RedirectHandler("/metrics", http.StatusFound))
 	err := web.ListenAndServe(&metricsServer, *tlsConfig, logger)
 	if err != nil {
-		_ = logger.Log("msg", "Run into bad state", "error", err)
+		_ = level.Error(logger).Log("msg", "Run into bad state", "error", err)
 		os.Exit(1)
 	}
 
