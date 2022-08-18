@@ -182,11 +182,18 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 			if iface.TrafficThrottled {
 				throttled = 1
 			}
+			seenIPs := make(map[string]bool)
 			for _, ip := range iface.Ipv4IP {
-				ch <- prometheus.MustNewConstMetric(collector.iface_throttled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv4", iface.Mac, iface.TrafficThrottledMessage)
+				if _, seen := seenIPs[*ip]; !seen {
+					seenIPs[*ip] = true
+					ch <- prometheus.MustNewConstMetric(collector.iface_throttled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv4", iface.Mac, iface.TrafficThrottledMessage)
+				}
 			}
 			for _, ip := range iface.Ipv6IP {
-				ch <- prometheus.MustNewConstMetric(collector.iface_throttled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv6", iface.Mac, iface.TrafficThrottledMessage)
+				if _, seen := seenIPs[*ip]; !seen {
+					seenIPs[*ip] = true
+					ch <- prometheus.MustNewConstMetric(collector.iface_throttled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv6", iface.Mac, iface.TrafficThrottledMessage)
+				}
 			}
 		}
 
