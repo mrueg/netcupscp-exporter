@@ -7,6 +7,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -28,7 +29,7 @@ var (
 	logLevel  = kingpin.Flag("log-level", "Log level (debug, info, warn, error)").Envar("SCP_LOGLEVEL").Default("info").String()
 )
 
-const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser"
+const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser" //nolint:gosec
 
 func main() {
 
@@ -45,12 +46,16 @@ func main() {
 	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
 	prometheus.DefaultRegisterer.MustRegister(scpCollector)
 	prometheus.DefaultRegisterer.MustRegister(version.NewCollector("scp"))
-	metricsServer := http.Server{Handler: promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{
-			// Opt into OpenMetrics to support exemplars.
-			EnableOpenMetrics: true,
-		}), Addr: *addr}
+	metricsServer := http.Server{
+		Handler: promhttp.HandlerFor(
+			prometheus.DefaultGatherer,
+			promhttp.HandlerOpts{
+				// Opt into OpenMetrics to support exemplars.
+				EnableOpenMetrics: true,
+			}),
+
+		Addr:              *addr,
+		ReadHeaderTimeout: 5 * time.Second}
 	http.Handle("/", http.RedirectHandler("/metrics", http.StatusFound))
 	err := web.ListenAndServe(&metricsServer, *tlsConfig, logger)
 	if err != nil {
