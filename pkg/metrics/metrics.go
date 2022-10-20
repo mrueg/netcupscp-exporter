@@ -2,6 +2,7 @@
 // License, version 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// Package metrics implements a metric collector to gather metrics from the NetCup API
 package metrics
 
 import (
@@ -19,7 +20,8 @@ import (
 
 const requestURL = "http://enduser.service.web.vcp.netcup.de/"
 
-type scpCollector struct {
+// ScpCollector struct includes all the information to gather metrics
+type ScpCollector struct {
 	client              scpclient.WSEndUser
 	logger              log.Logger
 	loginName           *string
@@ -40,9 +42,10 @@ type scpCollector struct {
 	diskOptimization    *prometheus.Desc
 }
 
-func NewScpCollector(client scpclient.WSEndUser, logger log.Logger, loginName *string, password *string) *scpCollector {
+// NewScpCollector returns a collector object
+func NewScpCollector(client scpclient.WSEndUser, logger log.Logger, loginName *string, password *string) *ScpCollector {
 	var prefix = "scp_"
-	return &scpCollector{
+	return &ScpCollector{
 		client:    client,
 		logger:    logger,
 		loginName: loginName,
@@ -98,7 +101,8 @@ func NewScpCollector(client scpclient.WSEndUser, logger log.Logger, loginName *s
 	}
 }
 
-func (collector *scpCollector) Describe(ch chan<- *prometheus.Desc) {
+// Describe implements prometheus.Describe for ScpCollector
+func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.cpuCores
 	ch <- collector.memory
 	ch <- collector.monthlyTrafficIn
@@ -114,7 +118,8 @@ func (collector *scpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.diskOptimization
 }
 
-func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
+// Collect implements prometheus.Collect for ScpCollector
+func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	genericRequest := &scpclient.GetVServers{
 		Xmlns:     requestURL,
 		LoginName: *collector.loginName,
@@ -153,19 +158,19 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficTotal, prometheus.GaugeValue, float64(infoResponse.Return_.CurrentMonth.Total*1024*1024), *vserver, strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Month)), strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Year)))
 
 		// Create server status metric
-		var online float64 = 0
+		var online float64
 		if infoResponse.Return_.Status == "online" {
 			online = 1
 		}
 		ch <- prometheus.MustNewConstMetric(collector.serverStatus, prometheus.GaugeValue, online, *vserver, infoResponse.Return_.Status, infoResponse.Return_.VServerNickname)
 
-		var rescue float64 = 0
+		var rescue float64
 		if infoResponse.Return_.RescueEnabled {
 			rescue = 1
 		}
 		ch <- prometheus.MustNewConstMetric(collector.rescueActive, prometheus.GaugeValue, rescue, *vserver, infoResponse.Return_.RescueEnabledMessage)
 
-		var reboot float64 = 0
+		var reboot float64
 		if infoResponse.Return_.RebootRecommended {
 			reboot = 1
 		}
@@ -178,7 +183,7 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 
 		// Create Interface throttling metric
 		for _, iface := range infoResponse.Return_.ServerInterfaces {
-			var throttled float64 = 0
+			var throttled float64
 			if iface.TrafficThrottled {
 				throttled = 1
 			}
@@ -202,7 +207,7 @@ func (collector *scpCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(collector.diskCapacity, prometheus.GaugeValue, float64(disk.Capacity*1024*1024*1024), *vserver, disk.Driver, disk.Name)
 			ch <- prometheus.MustNewConstMetric(collector.diskUsed, prometheus.GaugeValue, float64(disk.Used*1024*1024*1024), *vserver, disk.Driver, disk.Name)
 
-			var optimize float64 = 0
+			var optimize float64
 			if disk.OptimizationRecommended {
 				optimize = 1
 			}
