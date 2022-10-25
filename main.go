@@ -55,10 +55,14 @@ func main() {
 				EnableOpenMetrics: true,
 			}),
 
-		Addr:              *addr,
 		ReadHeaderTimeout: 5 * time.Second}
 	http.Handle("/", http.RedirectHandler("/metrics", http.StatusFound))
-	err := web.ListenAndServe(&metricsServer, *tlsConfig, logger)
+	flags := web.FlagConfig{
+		WebListenAddresses: &[]string{*addr},
+		WebSystemdSocket: new(bool),
+		WebConfigFile: tlsConfig,
+	}
+	err := web.ListenAndServe(&metricsServer, &flags, logger)
 	if err != nil {
 		_ = level.Error(logger).Log("msg", "Run into bad state", "error", err)
 		os.Exit(1)
