@@ -7,7 +7,7 @@ require (
 	github.com/hooklift/gowsdl v0.5.1-0.20220315224344-952a82fdd2b3
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.0
-	github.com/prometheus/exporter-toolkit v0.8.1
+	github.com/prometheus/exporter-toolkit v0.8.2
 	github.com/xhit/go-str2duration/v2 v2.0.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
