@@ -509,7 +509,6 @@ type GetVServerLogEntries struct {
 type GetVServerLogEntriesResponse struct {
 	XMLName xml.Name `xml:"getVServerLogEntriesResponse"`
 
-
 	Return_ []*LogEntry `xml:"return,omitempty" json:"return,omitempty"`
 }
 
@@ -563,7 +562,6 @@ type StopVServerResponse struct {
 
 type WebServiceSimpleResult struct {
 	XMLName xml.Name `xml:"webServiceSimpleResult"`
-
 
 	Message string `xml:"message,omitempty" json:"message,omitempty"`
 
