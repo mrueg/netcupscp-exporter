@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/go-kit/log v0.2.1
-	github.com/hooklift/gowsdl v0.5.1-0.20230328031213-0f6b60ef6cd3
+	github.com/hooklift/gowsdl v0.5.1-0.20230813171429-039e0b6b92e3
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/exporter-toolkit v0.10.0
