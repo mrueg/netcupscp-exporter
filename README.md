@@ -1,10 +1,12 @@
 # netcupscp-exporter
 Prometheus Exporter for [Netcup ServerControlPanel (SCP) WebService](https://www.netcup-wiki.de/wiki/Netcup_SCP_Webservice) to provide external visibility into server state.
-## Caveat
-As per Netcup support, be aware that they do not provide support for their own API. 
-Endpoints might change or break suddenly. 
-Due to the limited documentation, this exporter makes a couple of assumptions when interpreting the responses of the API. 
-Therefore, treat any values you get with caution. 
+
+> [!NOTE]
+> As per Netcup support, be aware that they do not provide support for their own API.
+> Endpoints might change or break suddenly.
+> Due to the limited documentation, this exporter makes a couple of assumptions when interpreting the responses of the API.
+> Therefore, treat any values you get with caution.
+> This repository is not affiliated with Netcup.
 
 ## Usage
 * Log into [SCP](https://servercontrolpanel.de)
