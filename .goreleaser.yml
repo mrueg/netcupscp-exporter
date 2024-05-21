@@ -12,12 +12,14 @@ builds:
   - -X github.com/prometheus/common/version.BuildUser={{ .Env.USER }}
   - -X github.com/prometheus/common/version.BuildDate={{ .Date }}
 archives:
-- replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
+- id: name
+  name_template: >-
+    {{- .ProjectName }}_
+    {{- title .Os }}_
+    {{- if eq .Arch "amd64" }}x86_64
+    {{- else if eq .Arch "386" }}i386
+    {{- else }}{{ .Arch }}{{ end }}
+    {{- if .Arm }}v{{ .Arm }}{{ end -}}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
