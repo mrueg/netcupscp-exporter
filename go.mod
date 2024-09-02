@@ -1,13 +1,13 @@
 module github.com/mrueg/netcupscp-exporter
 
-go 1.21
+go 1.22
 
-toolchain go1.22.1
+toolchain go1.22.6
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/go-kit/log v0.2.1
-	github.com/hooklift/gowsdl v0.5.1-0.20230813171429-039e0b6b92e3
+	github.com/hooklift/gowsdl v0.5.1-0.20240801015259-2a06cec86c50
 	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.57.0
 	github.com/prometheus/exporter-toolkit v0.11.0

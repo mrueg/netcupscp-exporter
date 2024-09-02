@@ -18,8 +18,8 @@ github.com/go-logfmt/logfmt v0.5.1/go.mod h1:WYhtIu8zTZfxdn5+rREduYbwxfcBr/Vr6KE
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/hooklift/gowsdl v0.5.1-0.20230813171429-039e0b6b92e3 h1:eRgBTGUo+DXJ6kk55DU0yWJvgHFUYi6l00saG2m41hM=
-github.com/hooklift/gowsdl v0.5.1-0.20230813171429-039e0b6b92e3/go.mod h1:9kRc402w9Ci/Mek5a1DNgTmU14yPY8fMumxNVvxhis4=
+github.com/hooklift/gowsdl v0.5.1-0.20240801015259-2a06cec86c50 h1:m+xRwHVyx/Gw+FmBLr93RHSlHazoefgcbNgiCfTvACE=
+github.com/hooklift/gowsdl v0.5.1-0.20240801015259-2a06cec86c50/go.mod h1:9kRc402w9Ci/Mek5a1DNgTmU14yPY8fMumxNVvxhis4=
 github.com/jpillora/backoff v1.0.0 h1:uvFg412JmmHBHw7iwprIxkPMI+sGQ4kzOWsMeHnm2EA=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2qeMA=
