@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/go-kit/log v0.2.1
 	github.com/hooklift/gowsdl v0.5.1-0.20240801015259-2a06cec86c50
-	github.com/prometheus/client_golang v1.20.2
+	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/common v0.58.0
 	github.com/prometheus/exporter-toolkit v0.12.0
 	github.com/xhit/go-str2duration/v2 v2.1.0
