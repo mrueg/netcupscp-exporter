@@ -6,19 +6,20 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/hooklift/gowsdl/soap"
 	"github.com/mrueg/netcupscp-exporter/pkg/metrics"
 	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 )
@@ -28,23 +29,22 @@ var (
 	password  = kingpin.Flag("password", "API Password").Envar("SCP_PASSWORD").Default("").String()
 	addr      = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Envar("SCP_LISTENADDRESS").Default(":9757").String()
 	tlsConfig = kingpin.Flag("tls-config", "Path to TLS config file.").Envar("SCP_TLSCONFIG").Default("").String()
-	logLevel  = kingpin.Flag("log-level", "Log level (debug, info, warn, error)").Envar("SCP_LOGLEVEL").Default("info").String()
 )
 
 const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser" //nolint:gosec
 
 func main() {
 
+	promslogConfig := &promslog.Config{}
+	flag.AddFlags(kingpin.CommandLine, promslogConfig)
 	kingpin.Version(version.Version + " git " + version.Revision)
 	kingpin.Parse()
 
-	var logger log.Logger
+	var logger *slog.Logger
 
 	var metricsPath = "/metrics"
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = level.NewFilter(logger, level.Allow(level.ParseDefault(*logLevel, level.InfoValue())))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
-	_ = level.Info(logger).Log("msg", "Starting SCP Exporter version "+version.Version+" git "+version.Revision)
+	logger = promslog.New(promslogConfig)
+	logger.Debug("Starting SCP Exporter version "+version.Version+" git "+version.Revision)
 	client := soap.NewClient(netcupWSUrl)
 	wsclient := scpclient.NewWSEndUser(client)
 	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
@@ -66,7 +66,8 @@ func main() {
 	}
 	landingPage, err := web.NewLandingPage(landingConfig)
 	if err != nil {
-		_ = level.Error(logger).Log(err, "failed to create landing page")
+		logger.Error("failed to create landing page", slog.Any("error", err))
+		os.Exit(1)
 	}
 	http.Handle(metricsPath, promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
@@ -83,7 +84,7 @@ func main() {
 	}
 	err = web.ListenAndServe(&metricsServer, &flags, logger)
 	if err != nil {
-		_ = level.Error(logger).Log("msg", "Run into bad state", "error", err)
+		logger.Error("Run into bad state", "error", err)
 		os.Exit(1)
 	}
 

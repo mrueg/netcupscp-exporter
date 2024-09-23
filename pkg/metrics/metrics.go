@@ -6,13 +6,12 @@
 package metrics
 
 import (
+	"log/slog"
 	"encoding/xml"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xhit/go-str2duration/v2"
@@ -23,7 +22,7 @@ const requestURL = "http://enduser.service.web.vcp.netcup.de/"
 // ScpCollector struct includes all the information to gather metrics
 type ScpCollector struct {
 	client              scpclient.WSEndUser
-	logger              log.Logger
+	logger              *slog.Logger
 	loginName           *string
 	password            *string
 	cpuCores            *prometheus.Desc
@@ -43,7 +42,7 @@ type ScpCollector struct {
 }
 
 // NewScpCollector returns a collector object
-func NewScpCollector(client scpclient.WSEndUser, logger log.Logger, loginName *string, password *string) *ScpCollector {
+func NewScpCollector(client scpclient.WSEndUser, logger *slog.Logger, loginName *string, password *string) *ScpCollector {
 	var prefix = "scp_"
 	return &ScpCollector{
 		client:    client,
@@ -127,11 +126,11 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	genericResponse, err := collector.client.GetVServers(genericRequest)
 	if err != nil {
-		_ = level.Error(collector.logger).Log("msg", "Unable to get servers", "err", err)
+		collector.logger.Error("Unable to get servers", slog.Any("error", err))
 	}
 
 	debug, _ := xml.Marshal(genericResponse)
-	_ = level.Debug(collector.logger).Log("msg", string(debug))
+	collector.logger.Debug(string(debug))
 
 	vservers := genericResponse.Return_
 
@@ -144,9 +143,9 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		infoResponse, err := collector.client.GetVServerInformation(infoRequest)
 		debug, _ := xml.Marshal(infoResponse)
-		_ = level.Debug(collector.logger).Log("msg", string(debug))
+		collector.logger.Debug(string(debug))
 		if err != nil {
-			_ = level.Error(collector.logger).Log("msg", "Unable to get Server Information", "err", err)
+			collector.logger.Error("Unable to get Server Information", slog.Any("error", err))
 		}
 		// Create CPU / Memory info metrics
 		ch <- prometheus.MustNewConstMetric(collector.cpuCores, prometheus.GaugeValue, float64(infoResponse.Return_.CpuCores), *vserver)
@@ -217,7 +216,7 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		// Create start time metric
 		uptime, err := parseUptimeString(&infoResponse.Return_.Uptime)
 		if err != nil {
-			_ = level.Error(collector.logger).Log("msg", "Unable to parse uptime", "err", err)
+			collector.logger.Error("Unable to parse uptime", slog.Any("error", err))
 		}
 		ch <- prometheus.MustNewConstMetric(collector.serverStartTime, prometheus.GaugeValue, float64(time.Now().Add(-uptime).Unix()), *vserver)
 	}
