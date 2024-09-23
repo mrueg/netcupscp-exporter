@@ -6,8 +6,8 @@
 package metrics
 
 import (
-	"log/slog"
 	"encoding/xml"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -126,7 +126,7 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 	genericResponse, err := collector.client.GetVServers(genericRequest)
 	if err != nil {
-		collector.logger.Error("Unable to get servers", slog.Any("error", err))
+		collector.logger.Error("Unable to get servers", "error", err.Error())
 	}
 
 	debug, _ := xml.Marshal(genericResponse)
@@ -145,7 +145,7 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		debug, _ := xml.Marshal(infoResponse)
 		collector.logger.Debug(string(debug))
 		if err != nil {
-			collector.logger.Error("Unable to get Server Information", slog.Any("error", err))
+			collector.logger.Error("Unable to get Server Information", "error", err.Error())
 		}
 		// Create CPU / Memory info metrics
 		ch <- prometheus.MustNewConstMetric(collector.cpuCores, prometheus.GaugeValue, float64(infoResponse.Return_.CpuCores), *vserver)
@@ -216,7 +216,7 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		// Create start time metric
 		uptime, err := parseUptimeString(&infoResponse.Return_.Uptime)
 		if err != nil {
-			collector.logger.Error("Unable to parse uptime", slog.Any("error", err))
+			collector.logger.Error("Unable to parse uptime", "error", err.Error())
 		}
 		ch <- prometheus.MustNewConstMetric(collector.serverStartTime, prometheus.GaugeValue, float64(time.Now().Add(-uptime).Unix()), *vserver)
 	}

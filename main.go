@@ -44,7 +44,7 @@ func main() {
 
 	var metricsPath = "/metrics"
 	logger = promslog.New(promslogConfig)
-	logger.Debug("Starting SCP Exporter version "+version.Version+" git "+version.Revision)
+	logger.Debug("Starting SCP Exporter version " + version.Version + " git " + version.Revision)
 	client := soap.NewClient(netcupWSUrl)
 	wsclient := scpclient.NewWSEndUser(client)
 	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
@@ -66,7 +66,7 @@ func main() {
 	}
 	landingPage, err := web.NewLandingPage(landingConfig)
 	if err != nil {
-		logger.Error("failed to create landing page", slog.Any("error", err))
+		logger.Error("failed to create landing page", "error", err.Error())
 		os.Exit(1)
 	}
 	http.Handle(metricsPath, promhttp.HandlerFor(
