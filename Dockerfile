@@ -1,4 +1,4 @@
-FROM golang:1.23.6-alpine3.20 AS builder
+FROM golang:1.24.1-alpine3.20 AS builder
 WORKDIR /go/src/github.com/mrueg/netcupscp-exporter
 COPY . .
 RUN apk --no-cache add make git && make
