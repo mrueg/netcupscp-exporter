@@ -13,8 +13,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/hooklift/gowsdl/soap"
-	"github.com/mrueg/netcupscp-exporter/pkg/metrics"
-	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
+	"github.com/mrueg/netcupscp-exporter/metrics"
+	"github.com/mrueg/netcupscp-exporter/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

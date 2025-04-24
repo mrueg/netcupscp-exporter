@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mrueg/netcupscp-exporter/pkg/scpclient"
+	"github.com/mrueg/netcupscp-exporter/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/xhit/go-str2duration/v2"
 )
