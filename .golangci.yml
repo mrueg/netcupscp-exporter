@@ -1,0 +1,10 @@
+version: "2"
+linters:
+  exclusions:
+    rules:
+      - path: 'scpclient/scpclient.go'
+        linters:
+          - staticcheck
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
