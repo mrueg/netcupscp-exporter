@@ -7,7 +7,7 @@ require (
 	github.com/hooklift/gowsdl v0.5.1-0.20240801015259-2a06cec86c50
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5
-	github.com/prometheus/exporter-toolkit v0.15.0
+	github.com/prometheus/exporter-toolkit v0.15.1
 	github.com/xhit/go-str2duration/v2 v2.1.0
 )
 
@@ -32,6 +32,6 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/time v0.13.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
