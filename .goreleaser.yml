@@ -48,7 +48,7 @@ kos:
       - ghcr.io/mrueg/netcupscp-exporter
     tags:
       - latest
-      - "{{.Version}}"
+      - "{{.Tag}}"
     platforms:
       - linux/amd64
       - linux/arm64
