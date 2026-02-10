@@ -82,12 +82,15 @@ scp_server_status{nickname="nick1",status="online",vserver="servername"} 1
 ```
 
 ## Build
+
+To build the binary locally:
+```bash
+go build -o netcupscp-exporter .
 ```
-make
-```
-or 
-```
-docker build -o netcupscp-exporter .
+
+Alternatively, you can use [GoReleaser](https://goreleaser.com/) to build for all supported platforms:
+```bash
+goreleaser build --clean --snapshot
 ```
 
 ## Maintenance
