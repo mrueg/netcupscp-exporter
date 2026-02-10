@@ -43,6 +43,7 @@ changelog:
 kos:
   - id: netcupscp-exporter
     build: netcupscp-exporter
+    bare: true
     repositories:
       - ghcr.io/mrueg/netcupscp-exporter
     tags:
