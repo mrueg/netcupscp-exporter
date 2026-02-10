@@ -6,6 +6,11 @@ builds:
 - id: netcupscp-exporter
   env:
   - CGO_ENABLED=0
+  goos:
+    - linux
+  goarch:
+    - amd64
+    - arm64
   ldflags:
   - -s -w
   - -X github.com/prometheus/common/version.Version={{ .Version}}
