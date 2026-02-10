@@ -3,7 +3,8 @@ before:
   hooks:
     - go mod download
 builds:
-- env:
+- id: netcupscp-exporter
+  env:
   - CGO_ENABLED=0
   ldflags:
   - -s -w
@@ -14,6 +15,8 @@ builds:
   - -X github.com/prometheus/common/version.BuildDate={{ .Date }}
 archives:
 - id: name
+  ids:
+    - netcupscp-exporter
   name_template: >-
     {{- .ProjectName }}_
     {{- title .Os }}_
@@ -31,3 +34,15 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+
+kos:
+  - id: netcupscp-exporter
+    build: netcupscp-exporter
+    repositories:
+      - ghcr.io/mrueg/netcupscp-exporter
+    tags:
+      - latest
+      - "{{.Tag}}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
