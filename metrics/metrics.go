@@ -35,6 +35,14 @@ type ScpCollector struct {
 	snapshotCount       *prometheus.Desc
 	configChanged       *prometheus.Desc
 	interfaceSpeed      *prometheus.Desc
+	cpuMaxCount         *prometheus.Desc
+	memoryMax           *prometheus.Desc
+	disksAvailableSpace *prometheus.Desc
+	autostartEnabled    *prometheus.Desc
+	uefiEnabled         *prometheus.Desc
+	latestQemu          *prometheus.Desc
+	disabled            *prometheus.Desc
+	snapshotAllowed     *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
@@ -74,7 +82,7 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 			[]string{"vserver", "driver", "id", "ip", "ip_type", "mac", "throttle_message"},
 			nil),
 		serverStatus: prometheus.NewDesc(prefix+"server_status", "Online (1) / Offline (0) status",
-			[]string{"vserver", "status", "nickname"},
+			[]string{"vserver", "status", "nickname", "architecture", "site_city"},
 			nil),
 		rescueActive: prometheus.NewDesc(prefix+"rescue_active", "Rescue system active (1) / inactive (0)",
 			[]string{"vserver", "message"},
@@ -97,6 +105,30 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 		interfaceSpeed: prometheus.NewDesc(prefix+"interface_speed_mbits", "Interface link speed in Mbits/s",
 			[]string{"vserver", "mac", "driver"},
 			nil),
+		cpuMaxCount: prometheus.NewDesc(prefix+"cpu_max_count", "Maximum number of CPU cores",
+			[]string{"vserver"},
+			nil),
+		memoryMax: prometheus.NewDesc(prefix+"memory_max_bytes", "Maximum amount of Memory in Bytes",
+			[]string{"vserver"},
+			nil),
+		disksAvailableSpace: prometheus.NewDesc(prefix+"disks_available_space_bytes", "Available space for new disks in Bytes",
+			[]string{"vserver"},
+			nil),
+		autostartEnabled: prometheus.NewDesc(prefix+"autostart_enabled", "Autostart enabled (1) / disabled (0)",
+			[]string{"vserver"},
+			nil),
+		uefiEnabled: prometheus.NewDesc(prefix+"uefi_enabled", "UEFI enabled (1) / disabled (0)",
+			[]string{"vserver"},
+			nil),
+		latestQemu: prometheus.NewDesc(prefix+"latest_qemu", "Server is running latest QEMU version (1) / older (0)",
+			[]string{"vserver"},
+			nil),
+		disabled: prometheus.NewDesc(prefix+"disabled", "Server is disabled (1) / enabled (0)",
+			[]string{"vserver"},
+			nil),
+		snapshotAllowed: prometheus.NewDesc(prefix+"snapshot_allowed", "Snapshot creation allowed (1) / disallowed (0)",
+			[]string{"vserver"},
+			nil),
 	}
 }
 
@@ -118,6 +150,14 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.snapshotCount
 	ch <- collector.configChanged
 	ch <- collector.interfaceSpeed
+	ch <- collector.cpuMaxCount
+	ch <- collector.memoryMax
+	ch <- collector.disksAvailableSpace
+	ch <- collector.autostartEnabled
+	ch <- collector.uefiEnabled
+	ch <- collector.latestQemu
+	ch <- collector.disabled
+	ch <- collector.snapshotAllowed
 }
 
 // Collect implements prometheus.Collect for ScpCollector
@@ -163,6 +203,30 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		server := infoResp.JSON200
 		liveInfo := server.ServerLiveInfo
 
+		if server.Disabled != nil {
+			var disabled float64
+			if *server.Disabled {
+				disabled = 1
+			}
+			ch <- prometheus.MustNewConstMetric(collector.disabled, prometheus.GaugeValue, disabled, vserverName)
+		}
+
+		if server.MaxCpuCount != nil {
+			ch <- prometheus.MustNewConstMetric(collector.cpuMaxCount, prometheus.GaugeValue, float64(*server.MaxCpuCount), vserverName)
+		}
+
+		if server.DisksAvailableSpaceInMiB != nil {
+			ch <- prometheus.MustNewConstMetric(collector.disksAvailableSpace, prometheus.GaugeValue, float64(*server.DisksAvailableSpaceInMiB*1024*1024), vserverName)
+		}
+
+		if server.SnapshotAllowed != nil {
+			var allowed float64
+			if *server.SnapshotAllowed {
+				allowed = 1
+			}
+			ch <- prometheus.MustNewConstMetric(collector.snapshotAllowed, prometheus.GaugeValue, allowed, vserverName)
+		}
+
 		if server.SnapshotCount != nil {
 			ch <- prometheus.MustNewConstMetric(collector.snapshotCount, prometheus.GaugeValue, float64(*server.SnapshotCount), vserverName)
 		}
@@ -174,6 +238,33 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			if liveInfo.CurrentServerMemoryInMiB != nil {
 				ch <- prometheus.MustNewConstMetric(collector.memory, prometheus.GaugeValue, float64(*liveInfo.CurrentServerMemoryInMiB*1024*1024), vserverName)
+			}
+			if liveInfo.MaxServerMemoryInMiB != nil {
+				ch <- prometheus.MustNewConstMetric(collector.memoryMax, prometheus.GaugeValue, float64(*liveInfo.MaxServerMemoryInMiB*1024*1024), vserverName)
+			}
+
+			if liveInfo.Autostart != nil {
+				var autostart float64
+				if *liveInfo.Autostart {
+					autostart = 1
+				}
+				ch <- prometheus.MustNewConstMetric(collector.autostartEnabled, prometheus.GaugeValue, autostart, vserverName)
+			}
+
+			if liveInfo.Uefi != nil {
+				var uefi float64
+				if *liveInfo.Uefi {
+					uefi = 1
+				}
+				ch <- prometheus.MustNewConstMetric(collector.uefiEnabled, prometheus.GaugeValue, uefi, vserverName)
+			}
+
+			if liveInfo.LatestQemu != nil {
+				var latestQemu float64
+				if *liveInfo.LatestQemu {
+					latestQemu = 1
+				}
+				ch <- prometheus.MustNewConstMetric(collector.latestQemu, prometheus.GaugeValue, latestQemu, vserverName)
 			}
 
 			if liveInfo.ConfigChanged != nil {
@@ -209,7 +300,15 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 					online = 1
 				}
 			}
-			ch <- prometheus.MustNewConstMetric(collector.serverStatus, prometheus.GaugeValue, online, vserverName, status, nickname)
+			arch := ""
+			if server.Architecture != nil {
+				arch = string(*server.Architecture)
+			}
+			city := ""
+			if server.Site != nil {
+				city = server.Site.City
+			}
+			ch <- prometheus.MustNewConstMetric(collector.serverStatus, prometheus.GaugeValue, online, vserverName, status, nickname, arch, city)
 
 			// Create start time metric
 			if liveInfo.UptimeInSeconds != nil {
