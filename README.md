@@ -60,6 +60,9 @@ scp_build_info{branch="",goversion="go1.17.5",revision="71a8595111dd83c45d9c0dd1
 # HELP scp_cpu_cores Number of CPU cores
 # TYPE scp_cpu_cores gauge
 scp_cpu_cores{vserver="servername"} 4
+# HELP scp_config_changed Pending configuration changes (1) / none (0)
+# TYPE scp_config_changed gauge
+scp_config_changed{vserver="servername"} 0
 # HELP scp_disk_capacity_bytes Available storage space in Bytes
 # TYPE scp_disk_capacity_bytes gauge
 scp_disk_capacity_bytes{driver="scsi",name="vda",vserver="servername"} 3.4359738368e+11
@@ -69,6 +72,9 @@ scp_disk_optimization{driver="scsi",message="",name="vda",vserver="servername"} 
 # HELP scp_disk_used_bytes Used storage space in Bytes
 # TYPE scp_disk_used_bytes gauge
 scp_disk_used_bytes{driver="scsi",name="vda",vserver="servername"} 3.221225472e+09
+# HELP scp_interface_speed_mbits Interface link speed in Mbits/s
+# TYPE scp_interface_speed_mbits gauge
+scp_interface_speed_mbits{driver="virtio",mac="aa:bb:cc:dd:ee:ff",vserver="servername"} 1000
 # HELP scp_interface_throttled Interface's traffic is throttled (1) or not (0)
 # TYPE scp_interface_throttled gauge
 scp_interface_throttled{driver="virtio",id="iface_id",ip="1.2.3.4",ip_type="ipv4",mac="aa:bb:cc:dd:ee:ff",throttle_message="",vserver="servername"} 0
@@ -98,6 +104,9 @@ scp_server_start_time_seconds{vserver="servername"} 1.64047511e+09
 # HELP scp_server_status Online (1) / Offline (0) status
 # TYPE scp_server_status gauge
 scp_server_status{nickname="nick1",status="online",vserver="servername"} 1
+# HELP scp_snapshot_count Total number of snapshots
+# TYPE scp_snapshot_count gauge
+scp_snapshot_count{vserver="servername"} 0
 ```
 
 ## Build

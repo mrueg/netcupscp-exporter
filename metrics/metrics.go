@@ -32,6 +32,9 @@ type ScpCollector struct {
 	diskCapacity        *prometheus.Desc
 	diskUsed            *prometheus.Desc
 	diskOptimization    *prometheus.Desc
+	snapshotCount       *prometheus.Desc
+	configChanged       *prometheus.Desc
+	interfaceSpeed      *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
@@ -85,6 +88,15 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 		diskOptimization: prometheus.NewDesc(prefix+"disk_optimization", "Optimization recommended (1) / not recommended (0)",
 			[]string{"vserver", "driver", "name", "message"},
 			nil),
+		snapshotCount: prometheus.NewDesc(prefix+"snapshot_count", "Total number of snapshots",
+			[]string{"vserver"},
+			nil),
+		configChanged: prometheus.NewDesc(prefix+"config_changed", "Pending configuration changes (1) / none (0)",
+			[]string{"vserver"},
+			nil),
+		interfaceSpeed: prometheus.NewDesc(prefix+"interface_speed_mbits", "Interface link speed in Mbits/s",
+			[]string{"vserver", "mac", "driver"},
+			nil),
 	}
 }
 
@@ -103,6 +115,9 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.diskCapacity
 	ch <- collector.diskUsed
 	ch <- collector.diskOptimization
+	ch <- collector.snapshotCount
+	ch <- collector.configChanged
+	ch <- collector.interfaceSpeed
 }
 
 // Collect implements prometheus.Collect for ScpCollector
@@ -148,6 +163,10 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 		server := infoResp.JSON200
 		liveInfo := server.ServerLiveInfo
 
+		if server.SnapshotCount != nil {
+			ch <- prometheus.MustNewConstMetric(collector.snapshotCount, prometheus.GaugeValue, float64(*server.SnapshotCount), vserverName)
+		}
+
 		if liveInfo != nil {
 			// Create CPU / Memory info metrics
 			if liveInfo.CpuCount != nil {
@@ -155,6 +174,14 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			if liveInfo.CurrentServerMemoryInMiB != nil {
 				ch <- prometheus.MustNewConstMetric(collector.memory, prometheus.GaugeValue, float64(*liveInfo.CurrentServerMemoryInMiB*1024*1024), vserverName)
+			}
+
+			if liveInfo.ConfigChanged != nil {
+				var changed float64
+				if *liveInfo.ConfigChanged {
+					changed = 1
+				}
+				ch <- prometheus.MustNewConstMetric(collector.configChanged, prometheus.GaugeValue, changed, vserverName)
 			}
 
 			// Create traffic metrics
@@ -202,11 +229,16 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 						mac = *iface.Mac
 					}
 					driver := ""
-					if iface.Driver != nil {
-						driver = *iface.Driver
-					}
-
-					if iface.Ipv4Addresses != nil {
+									if iface.Driver != nil {
+										driver = *iface.Driver
+									}
+					
+									if iface.SpeedInMBits != nil {
+										ch <- prometheus.MustNewConstMetric(collector.interfaceSpeed, prometheus.GaugeValue, float64(*iface.SpeedInMBits), vserverName, mac, driver)
+									}
+					
+									if iface.Ipv4Addresses != nil {
+					
 						for _, ip := range *iface.Ipv4Addresses {
 							ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, vserverName, driver, "", ip, "ipv4", mac, "")
 						}
