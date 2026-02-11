@@ -60,9 +60,18 @@ scp_build_info{branch="",goversion="go1.17.5",revision="71a8595111dd83c45d9c0dd1
 # HELP scp_cpu_cores Number of CPU cores
 # TYPE scp_cpu_cores gauge
 scp_cpu_cores{vserver="servername"} 4
+# HELP scp_cpu_max_count Maximum number of CPU cores
+# TYPE scp_cpu_max_count gauge
+scp_cpu_max_count{vserver="servername"} 16
+# HELP scp_autostart_enabled Autostart enabled (1) / disabled (0)
+# TYPE scp_autostart_enabled gauge
+scp_autostart_enabled{vserver="servername"} 1
 # HELP scp_config_changed Pending configuration changes (1) / none (0)
 # TYPE scp_config_changed gauge
 scp_config_changed{vserver="servername"} 0
+# HELP scp_disabled Server is disabled (1) / enabled (0)
+# TYPE scp_disabled gauge
+scp_disabled{vserver="servername"} 0
 # HELP scp_disk_capacity_bytes Available storage space in Bytes
 # TYPE scp_disk_capacity_bytes gauge
 scp_disk_capacity_bytes{driver="scsi",name="vda",vserver="servername"} 3.4359738368e+11
@@ -72,6 +81,9 @@ scp_disk_optimization{driver="scsi",message="",name="vda",vserver="servername"} 
 # HELP scp_disk_used_bytes Used storage space in Bytes
 # TYPE scp_disk_used_bytes gauge
 scp_disk_used_bytes{driver="scsi",name="vda",vserver="servername"} 3.221225472e+09
+# HELP scp_disks_available_space_bytes Available space for new disks in Bytes
+# TYPE scp_disks_available_space_bytes gauge
+scp_disks_available_space_bytes{vserver="servername"} 0
 # HELP scp_interface_speed_mbits Interface link speed in Mbits/s
 # TYPE scp_interface_speed_mbits gauge
 scp_interface_speed_mbits{driver="virtio",mac="aa:bb:cc:dd:ee:ff",vserver="servername"} 1000
@@ -83,9 +95,15 @@ scp_interface_throttled{driver="virtio",id="iface_id",ip="1:2:3:4::/64",ip_type=
 # TYPE scp_ip_info gauge
 scp_ip_info{ip="1.2.3.4",vserver="servername"} 1
 scp_ip_info{ip="1:2:3:4::",vserver="servername"} 1
+# HELP scp_latest_qemu Server is running latest QEMU version (1) / older (0)
+# TYPE scp_latest_qemu gauge
+scp_latest_qemu{vserver="servername"} 1
 # HELP scp_memory_bytes Amount of Memory in Bytes
 # TYPE scp_memory_bytes gauge
 scp_memory_bytes{vserver="servername"} 1.8013487104e+10
+# HELP scp_memory_max_bytes Maximum amount of Memory in Bytes
+# TYPE scp_memory_max_bytes gauge
+scp_memory_max_bytes{vserver="servername"} 1.8013487104e+10
 # HELP scp_monthlytraffic_in_bytes Monthly traffic incoming in Bytes (only gigabyte-level resolution)
 # TYPE scp_monthlytraffic_in_bytes gauge
 scp_monthlytraffic_in_bytes{month="1",vserver="servername",year="2022"} 2.097152e+06
@@ -103,10 +121,16 @@ scp_rescue_active{message="",vserver="servername"} 0
 scp_server_start_time_seconds{vserver="servername"} 1.64047511e+09
 # HELP scp_server_status Online (1) / Offline (0) status
 # TYPE scp_server_status gauge
-scp_server_status{nickname="nick1",status="online",vserver="servername"} 1
+scp_server_status{architecture="AMD64",nickname="nick1",site_city="Nuremberg",status="online",vserver="servername"} 1
+# HELP scp_snapshot_allowed Snapshot creation allowed (1) / disallowed (0)
+# TYPE scp_snapshot_allowed gauge
+scp_snapshot_allowed{vserver="servername"} 1
 # HELP scp_snapshot_count Total number of snapshots
 # TYPE scp_snapshot_count gauge
 scp_snapshot_count{vserver="servername"} 0
+# HELP scp_uefi_enabled UEFI enabled (1) / disabled (0)
+# TYPE scp_uefi_enabled gauge
+scp_uefi_enabled{vserver="servername"} 1
 ```
 
 ## Build
