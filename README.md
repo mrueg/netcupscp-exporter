@@ -60,6 +60,9 @@ scp_build_info{branch="",goversion="go1.17.5",revision="71a8595111dd83c45d9c0dd1
 # HELP scp_cpu_cores Number of CPU cores
 # TYPE scp_cpu_cores gauge
 scp_cpu_cores{vserver="servername"} 4
+# HELP scp_api_up API is reachable (1) / unreachable (0)
+# TYPE scp_api_up gauge
+scp_api_up 1
 # HELP scp_cpu_max_count Maximum number of CPU cores
 # TYPE scp_cpu_max_count gauge
 scp_cpu_max_count{vserver="servername"} 16
