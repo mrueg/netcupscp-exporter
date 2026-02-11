@@ -8,6 +8,7 @@ package metrics
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -47,6 +48,7 @@ type ScpCollector struct {
 	maintenanceFinish   *prometheus.Desc
 	taskInfo            *prometheus.Desc
 	tasksPending        *prometheus.Desc
+	apiUp               *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
@@ -142,6 +144,8 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 			nil),
 		tasksPending: prometheus.NewDesc(prefix+"tasks_pending_count", "Number of pending or running tasks",
 			nil, nil),
+		apiUp: prometheus.NewDesc(prefix+"api_up", "API is reachable (1) / unreachable (0)",
+			nil, nil),
 	}
 }
 
@@ -175,11 +179,20 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.maintenanceFinish
 	ch <- collector.taskInfo
 	ch <- collector.tasksPending
+	ch <- collector.apiUp
 }
 
 // Collect implements prometheus.Collect for ScpCollector
 func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.Background()
+
+	// API Ping
+	var apiUp float64
+	pResp, err := collector.client.GetApiPingWithResponse(ctx)
+	if err == nil && pResp.StatusCode() == http.StatusOK {
+		apiUp = 1
+	}
+	ch <- prometheus.MustNewConstMetric(collector.apiUp, prometheus.GaugeValue, apiUp)
 
 	// Maintenance info
 	mResp, err := collector.client.GetApiV1MaintenanceWithResponse(ctx)
