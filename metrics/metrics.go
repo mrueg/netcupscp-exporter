@@ -43,6 +43,10 @@ type ScpCollector struct {
 	latestQemu          *prometheus.Desc
 	disabled            *prometheus.Desc
 	snapshotAllowed     *prometheus.Desc
+	maintenanceStart    *prometheus.Desc
+	maintenanceFinish   *prometheus.Desc
+	taskInfo            *prometheus.Desc
+	tasksPending        *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
@@ -129,6 +133,15 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 		snapshotAllowed: prometheus.NewDesc(prefix+"snapshot_allowed", "Snapshot creation allowed (1) / disallowed (0)",
 			[]string{"vserver"},
 			nil),
+		maintenanceStart: prometheus.NewDesc(prefix+"maintenance_start_time_seconds", "Next maintenance window start time",
+			nil, nil),
+		maintenanceFinish: prometheus.NewDesc(prefix+"maintenance_finish_time_seconds", "Next maintenance window finish time",
+			nil, nil),
+		taskInfo: prometheus.NewDesc(prefix+"task_info", "Current task information",
+			[]string{"uuid", "name", "state"},
+			nil),
+		tasksPending: prometheus.NewDesc(prefix+"tasks_pending_count", "Number of pending or running tasks",
+			nil, nil),
 	}
 }
 
@@ -158,11 +171,29 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.latestQemu
 	ch <- collector.disabled
 	ch <- collector.snapshotAllowed
+	ch <- collector.maintenanceStart
+	ch <- collector.maintenanceFinish
+	ch <- collector.taskInfo
+	ch <- collector.tasksPending
 }
 
 // Collect implements prometheus.Collect for ScpCollector
 func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.Background()
+
+	// Maintenance info
+	mResp, err := collector.client.GetApiV1MaintenanceWithResponse(ctx)
+	if err != nil {
+		collector.logger.Error("Unable to get maintenance information", "error", err.Error())
+	} else if mResp.JSON200 != nil {
+		if mResp.JSON200.StartAt != nil {
+			ch <- prometheus.MustNewConstMetric(collector.maintenanceStart, prometheus.GaugeValue, float64(mResp.JSON200.StartAt.Unix()))
+		}
+		if mResp.JSON200.FinishAt != nil {
+			ch <- prometheus.MustNewConstMetric(collector.maintenanceFinish, prometheus.GaugeValue, float64(mResp.JSON200.FinishAt.Unix()))
+		}
+	}
+
 	resp, err := collector.client.GetApiV1ServersWithResponse(ctx, &scpclient.GetApiV1ServersParams{})
 	if err != nil {
 		collector.logger.Error("Unable to get servers", "error", err.Error())
@@ -172,6 +203,33 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 	if resp.JSON200 == nil {
 		collector.logger.Error("Unable to get servers", "status", resp.Status())
 		return
+	}
+
+	// Tasks info
+	tResp, err := collector.client.GetApiV1TasksWithResponse(ctx, &scpclient.GetApiV1TasksParams{})
+	if err != nil {
+		collector.logger.Error("Unable to get tasks", "error", err.Error())
+	} else if tResp.JSON200 != nil {
+		var pendingCount float64
+		for _, task := range *tResp.JSON200 {
+			state := ""
+			if task.State != nil {
+				state = string(*task.State)
+				if *task.State == scpclient.TaskStatePENDING || *task.State == scpclient.TaskStateRUNNING {
+					pendingCount++
+				}
+			}
+			uuid := ""
+			if task.Uuid != nil {
+				uuid = *task.Uuid
+			}
+			name := ""
+			if task.Name != nil {
+				name = *task.Name
+			}
+			ch <- prometheus.MustNewConstMetric(collector.taskInfo, prometheus.GaugeValue, 1, uuid, name, state)
+		}
+		ch <- prometheus.MustNewConstMetric(collector.tasksPending, prometheus.GaugeValue, pendingCount)
 	}
 
 	now := time.Now()

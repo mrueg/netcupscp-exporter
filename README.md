@@ -63,6 +63,12 @@ scp_cpu_cores{vserver="servername"} 4
 # HELP scp_cpu_max_count Maximum number of CPU cores
 # TYPE scp_cpu_max_count gauge
 scp_cpu_max_count{vserver="servername"} 16
+# HELP scp_maintenance_start_time_seconds Next maintenance window start time
+# TYPE scp_maintenance_start_time_seconds gauge
+scp_maintenance_start_time_seconds 1640475110
+# HELP scp_maintenance_finish_time_seconds Next maintenance window finish time
+# TYPE scp_maintenance_finish_time_seconds gauge
+scp_maintenance_finish_time_seconds 1640478710
 # HELP scp_autostart_enabled Autostart enabled (1) / disabled (0)
 # TYPE scp_autostart_enabled gauge
 scp_autostart_enabled{vserver="servername"} 1
@@ -131,6 +137,12 @@ scp_snapshot_count{vserver="servername"} 0
 # HELP scp_uefi_enabled UEFI enabled (1) / disabled (0)
 # TYPE scp_uefi_enabled gauge
 scp_uefi_enabled{vserver="servername"} 1
+# HELP scp_task_info Current task information
+# TYPE scp_task_info gauge
+scp_task_info{name="Create Snapshot",state="RUNNING",uuid="550e8400-e29b-11d4-a716-446655440000"} 1
+# HELP scp_tasks_pending_count Number of pending or running tasks
+# TYPE scp_tasks_pending_count gauge
+scp_tasks_pending_count 1
 ```
 
 ## Build
