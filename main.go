@@ -6,13 +6,13 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/hooklift/gowsdl/soap"
 	"github.com/mrueg/netcupscp-exporter/metrics"
 	"github.com/mrueg/netcupscp-exporter/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,16 +22,19 @@ import (
 	"github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
+	"golang.org/x/oauth2"
 )
 
 var (
-	loginName = kingpin.Flag("login-name", "User ID").Envar("SCP_LOGINNAME").Default("").String()
-	password  = kingpin.Flag("password", "API Password").Envar("SCP_PASSWORD").Default("").String()
-	addr      = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Envar("SCP_LISTENADDRESS").Default(":9757").String()
-	tlsConfig = kingpin.Flag("tls-config", "Path to TLS config file.").Envar("SCP_TLSCONFIG").Default("").String()
+	refreshToken = kingpin.Flag("refresh-token", "API Refresh Token").Envar("SCP_REFRESHTOKEN").Default("").String()
+	addr         = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Envar("SCP_LISTENADDRESS").Default(":9757").String()
+	tlsConfig    = kingpin.Flag("tls-config", "Path to TLS config file.").Envar("SCP_TLSCONFIG").Default("").String()
 )
 
-const netcupWSUrl = "https://www.servercontrolpanel.de/SCP/WSEndUser" //nolint:gosec
+const (
+	tokenURL = "https://www.servercontrolpanel.de/realms/scp/protocol/openid-connect/token"
+	apiURL   = "https://www.servercontrolpanel.de/scp-core"
+)
 
 func main() {
 
@@ -45,9 +48,32 @@ func main() {
 	var metricsPath = "/metrics"
 	logger = promslog.New(promslogConfig)
 	logger.Debug("Starting SCP Exporter version " + version.Version + " git " + version.Revision)
-	client := soap.NewClient(netcupWSUrl)
-	wsclient := scpclient.NewWSEndUser(client)
-	scpCollector := metrics.NewScpCollector(wsclient, logger, loginName, password)
+
+	if *refreshToken == "" {
+		logger.Error("Refresh token is required")
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	conf := &oauth2.Config{
+		ClientID: "scp",
+		Endpoint: oauth2.Endpoint{
+			TokenURL: tokenURL,
+		},
+	}
+
+	token := &oauth2.Token{
+		RefreshToken: *refreshToken,
+	}
+
+	httpClient := conf.Client(ctx, token)
+	client, err := scpclient.NewClientWithResponses(apiURL, scpclient.WithHTTPClient(httpClient))
+	if err != nil {
+		logger.Error("failed to create API client", "error", err.Error())
+		os.Exit(1)
+	}
+
+	scpCollector := metrics.NewScpCollector(client, logger)
 	prometheus.DefaultRegisterer.MustRegister(scpCollector)
 	prometheus.DefaultRegisterer.MustRegister(cversion.NewCollector("scp"))
 	metricsServer := http.Server{

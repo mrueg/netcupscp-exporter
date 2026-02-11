@@ -6,25 +6,19 @@
 package metrics
 
 import (
-	"encoding/xml"
+	"context"
 	"log/slog"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mrueg/netcupscp-exporter/scpclient"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/xhit/go-str2duration/v2"
 )
-
-const requestURL = "http://enduser.service.web.vcp.netcup.de/"
 
 // ScpCollector struct includes all the information to gather metrics
 type ScpCollector struct {
-	client              scpclient.WSEndUser
+	client              *scpclient.ClientWithResponses
 	logger              *slog.Logger
-	loginName           *string
-	password            *string
 	cpuCores            *prometheus.Desc
 	memory              *prometheus.Desc
 	monthlyTrafficIn    *prometheus.Desc
@@ -35,20 +29,17 @@ type ScpCollector struct {
 	ifaceThrottled      *prometheus.Desc
 	serverStatus        *prometheus.Desc
 	rescueActive        *prometheus.Desc
-	rebootRecommended   *prometheus.Desc
 	diskCapacity        *prometheus.Desc
 	diskUsed            *prometheus.Desc
 	diskOptimization    *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
-func NewScpCollector(client scpclient.WSEndUser, logger *slog.Logger, loginName *string, password *string) *ScpCollector {
+func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger) *ScpCollector {
 	var prefix = "scp_"
 	return &ScpCollector{
-		client:    client,
-		logger:    logger,
-		loginName: loginName,
-		password:  password,
+		client: client,
+		logger: logger,
 		cpuCores: prometheus.NewDesc(prefix+"cpu_cores",
 			"Number of CPU cores",
 			[]string{"vserver"},
@@ -85,9 +76,6 @@ func NewScpCollector(client scpclient.WSEndUser, logger *slog.Logger, loginName 
 		rescueActive: prometheus.NewDesc(prefix+"rescue_active", "Rescue system active (1) / inactive (0)",
 			[]string{"vserver", "message"},
 			nil),
-		rebootRecommended: prometheus.NewDesc(prefix+"reboot_recommended", "Reboot recommended (1) / not recommended (0)",
-			[]string{"vserver", "message"},
-			nil),
 		diskCapacity: prometheus.NewDesc(prefix+"disk_capacity_bytes", "Available storage space in Bytes",
 			[]string{"vserver", "driver", "name"},
 			nil),
@@ -119,115 +107,178 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collect for ScpCollector
 func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
-	genericRequest := &scpclient.GetVServers{
-		Xmlns:     requestURL,
-		LoginName: *collector.loginName,
-		Password:  *collector.password,
-	}
-	genericResponse, err := collector.client.GetVServers(genericRequest)
+	ctx := context.Background()
+	resp, err := collector.client.GetApiV1ServersWithResponse(ctx, &scpclient.GetApiV1ServersParams{})
 	if err != nil {
 		collector.logger.Error("Unable to get servers", "error", err.Error())
+		return
 	}
 
-	debug, _ := xml.Marshal(genericResponse)
-	collector.logger.Debug(string(debug))
+	if resp.JSON200 == nil {
+		collector.logger.Error("Unable to get servers", "status", resp.Status())
+		return
+	}
 
-	vservers := genericResponse.Return_
+	now := time.Now()
+	month := strconv.Itoa(int(now.Month()))
+	year := strconv.Itoa(now.Year())
 
-	for _, vserver := range vservers {
-		infoRequest := &scpclient.GetVServerInformation{
-			Xmlns:       requestURL,
-			LoginName:   *collector.loginName,
-			Password:    *collector.password,
-			Vservername: *vserver,
+	for _, s := range *resp.JSON200 {
+		serverID := s.Id
+		vserverName := ""
+		if s.Name != nil {
+			vserverName = *s.Name
 		}
-		infoResponse, err := collector.client.GetVServerInformation(infoRequest)
-		debug, _ := xml.Marshal(infoResponse)
-		collector.logger.Debug(string(debug))
+		nickname := ""
+		if s.Nickname != nil {
+			nickname = *s.Nickname
+		}
+
+		infoResp, err := collector.client.GetApiV1ServersServerIdWithResponse(ctx, *serverID, &scpclient.GetApiV1ServersServerIdParams{})
 		if err != nil {
-			collector.logger.Error("Unable to get Server Information", "error", err.Error())
+			collector.logger.Error("Unable to get Server Information", "vserver", vserverName, "error", err.Error())
+			continue
 		}
-		// Create CPU / Memory info metrics
-		ch <- prometheus.MustNewConstMetric(collector.cpuCores, prometheus.GaugeValue, float64(infoResponse.Return_.CpuCores), *vserver)
-		ch <- prometheus.MustNewConstMetric(collector.memory, prometheus.GaugeValue, float64(infoResponse.Return_.Memory*1024*1024), *vserver)
 
-		// Create traffic metrics
-		ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficIn, prometheus.GaugeValue, float64(infoResponse.Return_.CurrentMonth.In*1024*1024), *vserver, strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Month)), strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Year)))
-		ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficOut, prometheus.GaugeValue, float64(infoResponse.Return_.CurrentMonth.Out*1024*1024), *vserver, strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Month)), strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Year)))
-		ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficTotal, prometheus.GaugeValue, float64(infoResponse.Return_.CurrentMonth.Total*1024*1024), *vserver, strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Month)), strconv.Itoa(int(infoResponse.Return_.CurrentMonth.Year)))
-
-		// Create server status metric
-		var online float64
-		if infoResponse.Return_.Status == "online" {
-			online = 1
+		if infoResp.JSON200 == nil {
+			collector.logger.Error("Unable to get Server Information", "vserver", vserverName, "status", infoResp.Status())
+			continue
 		}
-		ch <- prometheus.MustNewConstMetric(collector.serverStatus, prometheus.GaugeValue, online, *vserver, infoResponse.Return_.Status, infoResponse.Return_.VServerNickname)
 
+		server := infoResp.JSON200
+		liveInfo := server.ServerLiveInfo
+
+		if liveInfo != nil {
+			// Create CPU / Memory info metrics
+			if liveInfo.CpuCount != nil {
+				ch <- prometheus.MustNewConstMetric(collector.cpuCores, prometheus.GaugeValue, float64(*liveInfo.CpuCount), vserverName)
+			}
+			if liveInfo.CurrentServerMemoryInMiB != nil {
+				ch <- prometheus.MustNewConstMetric(collector.memory, prometheus.GaugeValue, float64(*liveInfo.CurrentServerMemoryInMiB*1024*1024), vserverName)
+			}
+
+			// Create traffic metrics
+			var totalIn, totalOut float64
+			if liveInfo.Interfaces != nil {
+				for _, iface := range *liveInfo.Interfaces {
+					if iface.RxMonthlyInMiB != nil {
+						totalIn += float64(*iface.RxMonthlyInMiB) * 1024 * 1024
+					}
+					if iface.TxMonthlyInMiB != nil {
+						totalOut += float64(*iface.TxMonthlyInMiB) * 1024 * 1024
+					}
+				}
+			}
+			ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficIn, prometheus.GaugeValue, totalIn, vserverName, month, year)
+			ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficOut, prometheus.GaugeValue, totalOut, vserverName, month, year)
+			ch <- prometheus.MustNewConstMetric(collector.monthlyTrafficTotal, prometheus.GaugeValue, totalIn+totalOut, vserverName, month, year)
+
+			// Create server status metric
+			var online float64
+			status := ""
+			if liveInfo.State != nil {
+				status = string(*liveInfo.State)
+				if *liveInfo.State == scpclient.RUNNING {
+					online = 1
+				}
+			}
+			ch <- prometheus.MustNewConstMetric(collector.serverStatus, prometheus.GaugeValue, online, vserverName, status, nickname)
+
+			// Create start time metric
+			if liveInfo.UptimeInSeconds != nil {
+				startTime := now.Add(-time.Duration(*liveInfo.UptimeInSeconds) * time.Second)
+				ch <- prometheus.MustNewConstMetric(collector.serverStartTime, prometheus.GaugeValue, float64(startTime.Unix()), vserverName)
+			}
+
+			// Create Interface throttling metric
+			if liveInfo.Interfaces != nil {
+				for _, iface := range *liveInfo.Interfaces {
+					var throttled float64
+					if iface.TrafficThrottled != nil && *iface.TrafficThrottled {
+						throttled = 1
+					}
+					mac := ""
+					if iface.Mac != nil {
+						mac = *iface.Mac
+					}
+					driver := ""
+					if iface.Driver != nil {
+						driver = *iface.Driver
+					}
+
+					if iface.Ipv4Addresses != nil {
+						for _, ip := range *iface.Ipv4Addresses {
+							ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, vserverName, driver, "", ip, "ipv4", mac, "")
+						}
+					}
+					if iface.Ipv6LinkLocalAddresses != nil {
+						for _, ip := range *iface.Ipv6LinkLocalAddresses {
+							ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, vserverName, driver, "", ip, "ipv6", mac, "")
+						}
+					}
+					if iface.Ipv6NetworkPrefixes != nil {
+						for _, prefix := range *iface.Ipv6NetworkPrefixes {
+							ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, vserverName, driver, "", prefix, "ipv6", mac, "")
+						}
+					}
+				}
+			}
+
+			// Create Disk metrics
+			if liveInfo.Disks != nil {
+				for _, disk := range *liveInfo.Disks {
+					dev := ""
+					if disk.Dev != nil {
+						dev = *disk.Dev
+					}
+					driver := ""
+					if disk.Driver != nil {
+						driver = *disk.Driver
+					}
+					capacity := float64(0)
+					if disk.CapacityInMiB != nil {
+						capacity = float64(*disk.CapacityInMiB) * 1024 * 1024
+					}
+					allocation := float64(0)
+					if disk.AllocationInMiB != nil {
+						allocation = float64(*disk.AllocationInMiB) * 1024 * 1024
+					}
+
+					ch <- prometheus.MustNewConstMetric(collector.diskCapacity, prometheus.GaugeValue, capacity, vserverName, driver, dev)
+					ch <- prometheus.MustNewConstMetric(collector.diskUsed, prometheus.GaugeValue, allocation, vserverName, driver, dev)
+
+					var optimize float64
+					msg := ""
+					if liveInfo.RequiredStorageOptimization != nil && *liveInfo.RequiredStorageOptimization != scpclient.NO {
+						optimize = 1
+						msg = string(*liveInfo.RequiredStorageOptimization)
+					}
+					ch <- prometheus.MustNewConstMetric(collector.diskOptimization, prometheus.GaugeValue, optimize, vserverName, driver, dev, msg)
+				}
+			}
+		}
+
+		// Create rescue active metric
 		var rescue float64
-		if infoResponse.Return_.RescueEnabled {
+		if server.RescueSystemActive != nil && *server.RescueSystemActive {
 			rescue = 1
 		}
-		ch <- prometheus.MustNewConstMetric(collector.rescueActive, prometheus.GaugeValue, rescue, *vserver, infoResponse.Return_.RescueEnabledMessage)
-
-		var reboot float64
-		if infoResponse.Return_.RebootRecommended {
-			reboot = 1
-		}
-		ch <- prometheus.MustNewConstMetric(collector.rebootRecommended, prometheus.GaugeValue, reboot, *vserver, infoResponse.Return_.RebootRecommendedMessage)
+		ch <- prometheus.MustNewConstMetric(collector.rescueActive, prometheus.GaugeValue, rescue, vserverName, "")
 
 		// Create IP info metric
-		for _, ip := range infoResponse.Return_.Ips {
-			ch <- prometheus.MustNewConstMetric(collector.ipInfo, prometheus.GaugeValue, 1, *vserver, *ip)
-		}
-
-		// Create Interface throttling metric
-		for _, iface := range infoResponse.Return_.ServerInterfaces {
-			var throttled float64
-			if iface.TrafficThrottled {
-				throttled = 1
-			}
-			seenIPs := make(map[string]bool)
-			for _, ip := range iface.Ipv4IP {
-				if _, seen := seenIPs[*ip]; !seen {
-					seenIPs[*ip] = true
-					ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv4", iface.Mac, iface.TrafficThrottledMessage)
-				}
-			}
-			for _, ip := range iface.Ipv6IP {
-				if _, seen := seenIPs[*ip]; !seen {
-					seenIPs[*ip] = true
-					ch <- prometheus.MustNewConstMetric(collector.ifaceThrottled, prometheus.GaugeValue, throttled, *vserver, iface.Driver, iface.Id, *ip, "ipv6", iface.Mac, iface.TrafficThrottledMessage)
+		if server.Ipv4Addresses != nil {
+			for _, ip := range *server.Ipv4Addresses {
+				if ip.Ip != nil {
+					ch <- prometheus.MustNewConstMetric(collector.ipInfo, prometheus.GaugeValue, 1, vserverName, *ip.Ip)
 				}
 			}
 		}
-
-		// Create Disk metrics
-		for _, disk := range infoResponse.Return_.ServerDisks {
-			ch <- prometheus.MustNewConstMetric(collector.diskCapacity, prometheus.GaugeValue, float64(disk.Capacity*1024*1024*1024), *vserver, disk.Driver, disk.Name)
-			ch <- prometheus.MustNewConstMetric(collector.diskUsed, prometheus.GaugeValue, float64(disk.Used*1024*1024*1024), *vserver, disk.Driver, disk.Name)
-
-			var optimize float64
-			if disk.OptimizationRecommended {
-				optimize = 1
+		if server.Ipv6Addresses != nil {
+			for _, ip := range *server.Ipv6Addresses {
+				if ip.NetworkPrefix != nil {
+					ch <- prometheus.MustNewConstMetric(collector.ipInfo, prometheus.GaugeValue, 1, vserverName, *ip.NetworkPrefix)
+				}
 			}
-			ch <- prometheus.MustNewConstMetric(collector.diskOptimization, prometheus.GaugeValue, optimize, *vserver, disk.Driver, disk.Name, disk.OptimizationRecommendedMessage)
-
 		}
-		// Create start time metric
-		uptime, err := parseUptimeString(&infoResponse.Return_.Uptime)
-		if err != nil {
-			collector.logger.Error("Unable to parse uptime", "error", err.Error())
-		}
-		ch <- prometheus.MustNewConstMetric(collector.serverStartTime, prometheus.GaugeValue, float64(time.Now().Add(-uptime).Unix()), *vserver)
 	}
-}
-
-func parseUptimeString(uptime *string) (parsed time.Duration, err error) {
-	tmp := strings.Replace(*uptime, " days ", "d", 1)
-	tmp = strings.Replace(tmp, " day ", "d", 1)
-	tmp = strings.Replace(tmp, " hours ", "h", 1)
-	tmp = strings.Replace(tmp, " hour ", "h", 1)
-	tmp = strings.Replace(tmp, " minutes", "m", 1)
-	tmp = strings.Replace(tmp, " minute", "m", 1)
-	return str2duration.ParseDuration(tmp)
 }
