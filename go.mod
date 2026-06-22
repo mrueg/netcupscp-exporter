@@ -7,7 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.140.0
 	github.com/oapi-codegen/runtime v1.4.2
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.68.1
+	github.com/prometheus/common v0.69.0
 	github.com/prometheus/exporter-toolkit v0.16.0
 	golang.org/x/oauth2 v0.36.0
 )
