@@ -49,6 +49,8 @@ type ScpCollector struct {
 	taskInfo            *prometheus.Desc
 	tasksPending        *prometheus.Desc
 	apiUp               *prometheus.Desc
+	gpuDriverAvailable  *prometheus.Desc
+	guestAgentAvailable *prometheus.Desc
 }
 
 // NewScpCollector returns a collector object
@@ -146,6 +148,12 @@ func NewScpCollector(client *scpclient.ClientWithResponses, logger *slog.Logger)
 			nil, nil),
 		apiUp: prometheus.NewDesc(prefix+"api_up", "API is reachable (1) / unreachable (0)",
 			nil, nil),
+		gpuDriverAvailable: prometheus.NewDesc(prefix+"gpu_driver_available", "GPU driver download available for vserver (1) / unavailable (0)",
+			[]string{"vserver"},
+			nil),
+		guestAgentAvailable: prometheus.NewDesc(prefix+"guest_agent_available", "QEMU guest agent available (1) / unavailable (0)",
+			[]string{"vserver"},
+			nil),
 	}
 }
 
@@ -180,6 +188,8 @@ func (collector *ScpCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.taskInfo
 	ch <- collector.tasksPending
 	ch <- collector.apiUp
+	ch <- collector.gpuDriverAvailable
+	ch <- collector.guestAgentAvailable
 }
 
 // Collect implements prometheus.Collect for ScpCollector
@@ -300,6 +310,25 @@ func (collector *ScpCollector) Collect(ch chan<- prometheus.Metric) {
 
 		if server.SnapshotCount != nil {
 			ch <- prometheus.MustNewConstMetric(collector.snapshotCount, prometheus.GaugeValue, float64(*server.SnapshotCount), vserverName)
+		}
+
+		if server.GpuDriverAvailable != nil {
+			var gpuDriver float64
+			if *server.GpuDriverAvailable {
+				gpuDriver = 1
+			}
+			ch <- prometheus.MustNewConstMetric(collector.gpuDriverAvailable, prometheus.GaugeValue, gpuDriver, vserverName)
+		}
+
+		gaResp, gaErr := collector.client.GetApiV1ServersServerIdGuestAgentStatusWithResponse(ctx, *serverID)
+		if gaErr != nil {
+			collector.logger.Debug("Unable to get guest agent status", "vserver", vserverName, "error", gaErr.Error())
+		} else if gaResp.JSON200 != nil && gaResp.JSON200.Available != nil {
+			var gaAvailable float64
+			if *gaResp.JSON200.Available {
+				gaAvailable = 1
+			}
+			ch <- prometheus.MustNewConstMetric(collector.guestAgentAvailable, prometheus.GaugeValue, gaAvailable, vserverName)
 		}
 
 		if liveInfo != nil {
