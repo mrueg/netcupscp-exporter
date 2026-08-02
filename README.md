@@ -146,6 +146,12 @@ scp_task_info{name="Create Snapshot",state="RUNNING",uuid="550e8400-e29b-11d4-a7
 # HELP scp_tasks_pending_count Number of pending or running tasks
 # TYPE scp_tasks_pending_count gauge
 scp_tasks_pending_count 1
+# HELP scp_gpu_driver_available GPU driver download available for vserver (1) / unavailable (0)
+# TYPE scp_gpu_driver_available gauge
+scp_gpu_driver_available{vserver="servername"} 0
+# HELP scp_guest_agent_available QEMU guest agent available (1) / unavailable (0)
+# TYPE scp_guest_agent_available gauge
+scp_guest_agent_available{vserver="servername"} 1
 ```
 
 ## Build
